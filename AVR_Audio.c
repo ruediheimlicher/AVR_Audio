@@ -495,7 +495,6 @@ void main (void)
                aktuellerkanal = 0xFF;
             }
              
-            //PORTD &= ~((1 << 3) | (1 << 4)| (1 << 5)| (1 << 6)); // alle relais off
 
             if (inputstatus == 0) // Kein Eingang aktiv
             {
