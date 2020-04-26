@@ -91,7 +91,10 @@ volatile uint8_t outputstatus = 0; // status fuer Ausgang
 
 volatile uint8_t loopstatus = 0; // Status fuer loop
 
+volatile uint8_t exorcounter = 0; // Status fuer loop
+
 volatile uint8_t aktuellerkanal = 0;
+volatile uint8_t neuerkanal = 0;
 
 // defines loopstatus
 #define SEKUNDE         0
@@ -164,7 +167,7 @@ void audio_remote(uint8_t command)
       {
          lcd_gotoxy(10,0);
          lcd_puts("play ");
-
+         PORTD &= ~((1 << 3) | (1 << 4)| (1 << 5)| (1 << 6)); 
          break;
       }
          
@@ -238,7 +241,7 @@ ISR(TIMER1_COMPA_vect)                                                          
       sekundencounter++;
       //toggleB;
       loopstatus |= (1<<SEKUNDE); // sekundentasks in loop aktivieren
-      inputstatus = (PINC & 0x0F); // Status des Eingangsports aufnehmen
+      //inputstatus = (PINC & 0x0F); // Status des Eingangsports aufnehmen
    }
  
 }
@@ -369,7 +372,7 @@ void main (void)
       eepromWDT_Count0=0;
       
    }
-   
+   lcd_clr_line(0);
    sei ();                                                                 // enable interrupts
    
     while (1)
@@ -443,62 +446,154 @@ void main (void)
 #pragma mark SEKUNDE
       if (loopstatus & (1<<SEKUNDE)) // sekundentask abarbeiten
       {
+         //cli();
+         //lcd_clr_line(0);
          loopstatus &= ~(1<<SEKUNDE);
+         
+         inputstatus = (PINC & 0x0F); // Status des Eingangsports aufnehmen
+         
+         aktuellerkanal=0xFF;
+         // aktiven Kanal suchen
+         for (int kanal=0;kanal < 4;kanal++)
+         {
+            if (inputstatus & (1<<kanal))
+            {
+               aktuellerkanal = kanal;
+            }
+         }
+          
          lcd_gotoxy(0,1);
          lcd_putc('A');
+         lcd_putint1(aktuellerkanal);
+         
+         lcd_gotoxy(0,0);
+         lcd_puts("OD");
          uint8_t d = PIND;
          lcd_puthex((PIND & 0x78)>>3); // bit 3-6
-
-         if (inputstatus ^ lastinputstatus) // Aenderung: neuer Kanal
+         lcd_putc(' ');
+         lcd_puts("IC");
+         lcd_puthex(inputstatus);
+         
+         uint8_t change = inputstatus ^ lastinputstatus;
+         if (change) // Aenderung: neuer Kanal
          {
+            exorcounter++;
+            lcd_gotoxy(16,3);
+            lcd_puthex(exorcounter);
             
             lcd_gotoxy(4,1);
-            lcd_putc('L');
-            lcd_puthex(lastinputstatus);
-            
-            lcd_putc(' ');
+            lcd_putc('A');
+            lcd_putint1(aktuellerkanal);
+
+            if (aktuellerkanal < 0xFF) // aktuellen kanal vorhanden, ausschalten
+            {
+               uint8_t relais = aktuellerkanal+3; // position auf PORTD
+               PORTD &= ~(1 << relais);
+               //inputstatus &= ~(1<<aktuellerkanal);
+               aktuellerkanal = 0xFF;
+            }
+             
+            //PORTD &= ~((1 << 3) | (1 << 4)| (1 << 5)| (1 << 6)); // alle relais off
+
+            if (inputstatus == 0) // Kein Eingang aktiv
+            {
+               PORTD &= ~((1 << 3) | (1 << 4)| (1 << 5)| (1 << 6)); // alle relais off
+               neuerkanal = 0xFF;
+               
+            }
+            else
+            {
+               
+               // neuen aktuellen Kanal suchen
+               neuerkanal = 0xFF;
+               for (int kanal=0;kanal < 4;kanal++)
+               {
+                  if ((change) & (1<<kanal))
+                  {
+                     neuerkanal = kanal;
+                  }
+               }
+               
+               if (neuerkanal < 0xFF)
+               {
+                  aktuellerkanal = neuerkanal;
+                  uint8_t relais = neuerkanal+3; // position auf PORTD
+                  outputdelay = OUTPUTDELAY;
+                  PORTD |= (1<< (relais));
+               }
+               
+               lcd_putc(' ');
+               lcd_putc('N');
+               lcd_putint1(neuerkanal);
+               
+               
+               
+               /*
+                lcd_gotoxy(4,1);
+                lcd_putc('L');
+                lcd_puthex(lastinputstatus);
+                
+                lcd_putc(' ');
+                lcd_putc('I');
+                lcd_puthex(inputstatus);
+                lcd_putc(' ');
+                
+                lcd_putc('^');
+                lcd_puthex(inputstatus ^ lastinputstatus);
+                kanalstatus = inputstatus ^ lastinputstatus; //Neuer aktiver Kanal
+                lcd_putc(' ');
+                
+                lcd_putc('K');
+                lcd_puthex(kanalstatus);
+                */
+               
+               // Input
+               for (int kanal=0;kanal < 4;kanal++)
+               {
+                  uint8_t relais = kanal+3; // position auf PORTD
+                  if (kanalstatus & (1<<kanal))
+                  {
+                     kanaldelay[kanal] = KANALDELAY;
+                     //inputstatus |= (1<<kanal);
+                     //       PORTD |= (1<<relais);
+                     
+                  }
+                  else 
+                  {
+                     // PORTD &= ~(1<<relais);
+                     //         inputstatus &= ~(1<<kanal);
+                     //         kanaldelay[kanal] = 0;
+                     
+                     if (kanaldelay[kanal]) // noch aktiviert
+                     {
+                        kanaldelay[kanal] --;
+                     }
+                     if (kanaldelay[kanal] == 0)
+                     {
+                        //       PORTD &= ~(1<<relais);
+                     }
+                     
+                  }
+                  
+               } // Input
+            }
+            lastinputstatus = inputstatus;
+            lcd_gotoxy(12,0);
+            lcd_putc('*');
             lcd_putc('I');
             lcd_puthex(inputstatus);
-            lcd_putc(' ');
             
-            lcd_putc('^');
-            lcd_puthex(inputstatus ^ lastinputstatus);
-            kanalstatus = inputstatus ^ lastinputstatus; //Neuer aktiver Kanal
             lcd_putc(' ');
-            
             lcd_putc('K');
             lcd_puthex(kanalstatus);
             
-            // Input
-            for (int kanal=0;kanal < 4;kanal++)
-            {
-               uint8_t relais = kanal+3; // position auf PORTD
-               if (kanalstatus & (1<<kanal))
-               {
-                  kanaldelay[kanal] = KANALDELAY;
-                  PORTD |= (1<<relais);
-               }
-               else 
-               {
-                  PORTD &= ~(1<<relais);
-                  inputstatus &= ~(1<<kanal);
-                  kanaldelay[kanal] = 0;
-                  /*
-                   if (kanaldelay[kanal]) // noch aktiviert
-                   {
-                   kanaldelay[kanal] --;
-                   }
-                   if (kanaldelay[kanal] == 0)
-                   {
-                   //       PORTD &= ~(1<<relais);
-                   }
-                   */
-               }
-               
-            } // Input
-            lastinputstatus = inputstatus;
-            
-         }
+            lcd_putc(' ');
+            lcd_putc('D');
+            uint8_t d = PIND;
+            lcd_puthex((PIND & 0x78)>>3); // bit 3-6
+
+
+         } // if change
          else
          {
             //lcd_gotoxy(15,2);
@@ -524,7 +619,7 @@ void main (void)
             //PORTB &= ~(1<<PB0);
          }
         
-         
+         sei(); 
       } // sekunde
       
       if (outputdelay) // Output soll ON sein
@@ -537,6 +632,7 @@ void main (void)
       {
          loopstatus &= ~(1<<AMP_ON);
          PORTB &= ~(1<<PB0); // OFF
+         PORTD &= ~((1 << 3) | (1 << 4)| (1 << 5)| (1 << 6)); // alle relais off
       }
      
       
