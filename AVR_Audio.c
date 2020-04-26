@@ -106,6 +106,8 @@ uint16_t kanaldelayB = KANALDELAY;
 uint16_t kanaldelayC= KANALDELAY;
 uint16_t kanaldelayD = KANALDELAY;
 
+uint8_t kanalarray[4] = {0}; // Liste fer  Kanaele mit input
+
 uint16_t outputdelay = OUTPUTDELAY;
 
 uint16_t timer1counter = 0;
@@ -458,7 +460,13 @@ void main (void)
          {
             if (inputstatus & (1<<kanal))
             {
+               
                aktuellerkanal = kanal;
+               kanalarray[kanal] = 1; 
+            }
+            else
+            {
+               kanalarray[kanal] = 0;
             }
          }
           
@@ -477,8 +485,6 @@ void main (void)
          uint8_t change = inputstatus ^ lastinputstatus;
          if (change) // Aenderung: neuer Kanal
          {
-            
-            
             exorcounter++;
             lcd_gotoxy(16,3);
             lcd_puthex(exorcounter);
