@@ -478,6 +478,7 @@ void main (void)
          if (change) // Aenderung: neuer Kanal
          {
             
+            
             exorcounter++;
             lcd_gotoxy(16,3);
             lcd_puthex(exorcounter);
