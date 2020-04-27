@@ -94,6 +94,8 @@ volatile uint8_t loopstatus = 0; // Status fuer loop
 volatile uint8_t exorcounter = 0; // Status fuer loop
 
 volatile uint8_t aktuellerkanal = 0;
+
+volatile uint8_t aktiverkanal = 0;
 volatile uint8_t neuerkanal = 0;
 
 // defines loopstatus
@@ -106,7 +108,7 @@ uint16_t kanaldelayB = KANALDELAY;
 uint16_t kanaldelayC= KANALDELAY;
 uint16_t kanaldelayD = KANALDELAY;
 
-uint8_t kanalarray[4] = {0}; // Liste fer  Kanaele mit input
+uint8_t kanalarray[4] = {0xFF}; // Liste fuer  Kanaele mit input
 
 uint16_t outputdelay = OUTPUTDELAY;
 
@@ -390,8 +392,8 @@ void main (void)
          TastaturCount++;
          //lcd_gotoxy(13,1);
          //lcd_putint(TastaturCount);
-         lcd_gotoxy(17,0);
-         lcd_putint(sekundencounter);
+         lcd_gotoxy(19,0);
+         lcd_putint1(sekundencounter);
          lcd_gotoxy(0,3);
          lcd_puthex(protokoll);
          protokoll=0;
@@ -405,11 +407,9 @@ void main (void)
          lcd_putint12(irmpcontrolD);
          irmpcontrolD=0;
          lcd_putc(' ');
-         lcd_gotoxy(0,2);
-         lcd_puthex(inputstatus);
-         lcd_putc(' ');
-         lcd_putint12(outputdelay);
-         lcd_putc(' ');
+         
+         
+         /*
          lcd_puthex(kanaldelay[0]);
          lcd_putc(' ');
          lcd_puthex(kanaldelay[1]);
@@ -417,7 +417,7 @@ void main (void)
          lcd_puthex(kanaldelay[2]);
          lcd_putc(' ');
          lcd_puthex(kanaldelay[3]);
-
+*/
 
          /*
          if ((inputstatus & 0x0F) > 0)
@@ -453,15 +453,26 @@ void main (void)
          loopstatus &= ~(1<<SEKUNDE);
          
          inputstatus = (PINC & 0x0F); // Status des Eingangsports aufnehmen
+       
+         lcd_gotoxy(0,2);
+         lcd_puthex(inputstatus);
+         lcd_putc(' ');
+         lcd_putint(outputdelay);
+         lcd_putc(' ');
          
-         aktuellerkanal=0xFF;
+         
+         
+         /*
+         aktiverkanal=0xFF;
          // aktiven Kanal suchen
          for (int kanal=0;kanal < 4;kanal++)
          {
             if (inputstatus & (1<<kanal))
             {
-               
-               aktuellerkanal = kanal;
+              // if (kanalarray[kanal] == 0) // neuer Kanal
+               {
+                  aktiverkanal = kanal;
+               }
                kanalarray[kanal] = 1; 
             }
             else
@@ -472,7 +483,8 @@ void main (void)
           
          lcd_gotoxy(0,1);
          lcd_putc('A');
-         lcd_putint1(aktuellerkanal);
+         lcd_puthex(aktiverkanal);
+         */
          
          lcd_gotoxy(0,0);
          lcd_puts("OD");
@@ -482,7 +494,17 @@ void main (void)
          lcd_puts("IC");
          lcd_puthex(inputstatus);
          
-         uint8_t change = inputstatus ^ lastinputstatus;
+         //Aenderung abfragen
+         uint8_t change = inputstatus ^ lastinputstatus; 
+         
+         lcd_gotoxy(8,2);
+         lcd_puts("ch");
+         lcd_puthex(change);
+         uint8_t ex = change & inputstatus;
+         lcd_putc(' ');
+         lcd_puts("ex");
+         lcd_puthex(ex);
+         
          if (change) // Aenderung: neuer Kanal
          {
             exorcounter++;
@@ -585,8 +607,8 @@ void main (void)
                } // Input
             }
             lastinputstatus = inputstatus;
-            lcd_gotoxy(12,0);
-            lcd_putc('*');
+            lcd_gotoxy(10,0);
+            //lcd_putc('*');
             lcd_putc('I');
             lcd_puthex(inputstatus);
             
@@ -594,10 +616,10 @@ void main (void)
             lcd_putc('K');
             lcd_puthex(kanalstatus);
             
-            lcd_putc(' ');
-            lcd_putc('D');
-            uint8_t d = PIND;
-            lcd_puthex((PIND & 0x78)>>3); // bit 3-6
+  //          lcd_putc(' ');
+  //          lcd_putc('D');
+  //          uint8_t d = PIND;
+  //          lcd_puthex((PIND & 0x78)>>3); // bit 3-6
 
 
          } // if change
