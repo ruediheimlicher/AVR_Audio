@@ -504,23 +504,33 @@ void main (void)
          lcd_putc(' ');
          lcd_puts("ex");
          lcd_puthex(ex);
-         
+          
          if (change) // Aenderung: neuer Kanal
          {
             exorcounter++;
             lcd_gotoxy(16,3);
             lcd_puthex(exorcounter);
             
-            lcd_gotoxy(4,1);
+            lcd_gotoxy(0,1);
             lcd_putc('A');
             lcd_putint1(aktuellerkanal);
-
+            
+            uint8_t kanalnew = change & inputstatus; 
+            // > 0: Kanal von change ist neu;   0: Kanal von change ist weg
+            
+            
             if (aktuellerkanal < 0xFF) // aktuellen kanal vorhanden, ausschalten
             {
+               lcd_gotoxy(10,1);
+               lcd_puts("weg");
+               lcd_putint(aktuellerkanal);
                uint8_t relais = aktuellerkanal+3; // position auf PORTD
                PORTD &= ~(1 << relais);
                //inputstatus &= ~(1<<aktuellerkanal);
                aktuellerkanal = 0xFF;
+               lcd_putc(' ');
+               lcd_putint(aktuellerkanal);
+               
             }
              
 
@@ -528,20 +538,40 @@ void main (void)
             {
                PORTD &= ~((1 << 3) | (1 << 4)| (1 << 5)| (1 << 6)); // alle relais off
                neuerkanal = 0xFF;
-               
+               inputstatus = 0;
+               //break;
             }
             else
             {
                
                // neuen aktuellen Kanal suchen
                neuerkanal = 0xFF;
-               for (int kanal=0;kanal < 4;kanal++)
+               
+               if (kanalnew) // neuer Kanal dazugekommen
                {
-                  if ((change) & (1<<kanal))
+                  for (int kanal=0;kanal < 4;kanal++)
                   {
-                     neuerkanal = kanal;
+                     if ((change) & (1<<kanal))
+                     {
+                        neuerkanal = kanal;
+                     }
                   }
                }
+               else  // Kanal ausgeschaltet
+               {
+                  // ersten aktiven Kanal suchen
+                  for (int kanal=0;kanal < 4;kanal++)
+                  {
+                     if ((inputstatus) & (1<<kanal))
+                     {
+                        neuerkanal = kanal;
+                     }
+                  }
+                  
+               }
+               
+               
+               
                
                if (neuerkanal < 0xFF)
                {
@@ -551,7 +581,7 @@ void main (void)
                   PORTD |= (1<< (relais));
                }
                
-               lcd_putc(' ');
+               lcd_gotoxy(3,1);
                lcd_putc('N');
                lcd_putint1(neuerkanal);
                
