@@ -459,7 +459,14 @@ void main (void)
          lcd_putc(' ');
          lcd_putint(outputdelay);
          lcd_putc(' ');
-         
+         lcd_puthex(kanaldelay[0]);
+         lcd_putc(' ');
+         lcd_puthex(kanaldelay[1]);
+         lcd_putc(' ');
+         lcd_puthex(kanaldelay[2]);
+         lcd_putc(' ');
+         lcd_puthex(kanaldelay[3]);
+
          
          
          /*
@@ -497,6 +504,7 @@ void main (void)
          //Aenderung abfragen
          uint8_t change = inputstatus ^ lastinputstatus; 
          
+         /*
          lcd_gotoxy(8,2);
          lcd_puts("ch");
          lcd_puthex(change);
@@ -504,7 +512,7 @@ void main (void)
          lcd_putc(' ');
          lcd_puts("ex");
          lcd_puthex(ex);
-          
+         */ 
          if (change) // Aenderung: neuer Kanal
          {
             exorcounter++;
@@ -519,9 +527,9 @@ void main (void)
             // > 0: Kanal von change ist neu;   0: Kanal von change ist weg
             
             
-            if (aktuellerkanal < 0xFF) // aktuellen kanal vorhanden, ausschalten
+            if (aktuellerkanal < 0xFF) // aktueller kanal vorhanden, ausschalten
             {
-               lcd_gotoxy(10,1);
+               lcd_gotoxy(8,1);
                lcd_puts("weg");
                lcd_putint(aktuellerkanal);
                uint8_t relais = aktuellerkanal+3; // position auf PORTD
@@ -579,6 +587,7 @@ void main (void)
                   uint8_t relais = neuerkanal+3; // position auf PORTD
                   outputdelay = OUTPUTDELAY;
                   PORTD |= (1<< (relais));
+                  kanalstatus |= (1<<neuerkanal);
                }
                
                lcd_gotoxy(3,1);
@@ -610,7 +619,7 @@ void main (void)
                for (int kanal=0;kanal < 4;kanal++)
                {
                   uint8_t relais = kanal+3; // position auf PORTD
-                  if (kanalstatus & (1<<kanal))
+                  if (kanalstatus & (1<<kanal)) // noch aktiv
                   {
                      kanaldelay[kanal] = KANALDELAY;
                      //inputstatus |= (1<<kanal);
@@ -623,13 +632,13 @@ void main (void)
                      //         inputstatus &= ~(1<<kanal);
                      //         kanaldelay[kanal] = 0;
                      
-                     if (kanaldelay[kanal]) // noch aktiviert
+                     if (kanaldelay[kanal]) // noch nicht auf null
                      {
                         kanaldelay[kanal] --;
                      }
                      if (kanaldelay[kanal] == 0)
                      {
-                        //       PORTD &= ~(1<<relais);
+                        PORTD &= ~(1<<relais);
                      }
                      
                   }
