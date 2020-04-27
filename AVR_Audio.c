@@ -95,6 +95,8 @@ volatile uint8_t exorcounter = 0; // Status fuer loop
 
 volatile uint8_t aktuellerkanal = 0;
 
+volatile uint8_t lastkanal = 0xFF;
+
 
 
 volatile uint8_t aktiverkanal = 0;
@@ -147,23 +149,32 @@ void audio_remote(uint8_t command)
       case APPLE_REW: /*  */
       {
          lcd_gotoxy(10,0);
-         lcd_puts("rew  ");
+         lcd_puts("rew");
          lcd_puthex(inputstatus);
          lcd_putc(' ');
          lcd_puthex(aktuellerkanal);
          if (aktuellerkanal && (inputstatus & (1<<(aktuellerkanal-1))))
          {
-            aktuellerkanal++;
+            aktuellerkanal--;
             remotechange |= (1<<aktuellerkanal);
          }
+         lcd_puthex(remotechange);
          break;
       }
          
       case APPLE_FWD:
       {
          lcd_gotoxy(10,0);
-         lcd_puts("fwd  ");
+         lcd_puts("fwd");
          lcd_puthex(inputstatus);
+         lcd_putc(' ');
+         lcd_puthex(aktuellerkanal);
+         if ((aktuellerkanal < 3) && (inputstatus & (1<<(aktuellerkanal+1))))
+         {
+            aktuellerkanal++;
+            remotechange |= (1<<aktuellerkanal);
+         }
+         lcd_puthex(remotechange);
          break;
       }
          
@@ -482,17 +493,33 @@ void main (void)
             {
                inputstatus |= (1<<kanal);
             }
-            //lcd_putint12(inputlevel[kanal]);
+            
+             //lcd_putint12(inputlevel[kanal]);
             //lcd_putc(' ');
          }
+         
+         
+         if (lastkanal < 0xFF) // ein lastkanal festgelegt
+         {
+            if (inputlevel[lastkanal] > INPUTLEVEL) // kanal aktiv
+            {
+               inputstatus &= ~(1<<lastkanal); // lastkanal entfernen
+            }
+           else
+           {
+              lastkanal = 0xFF;
+           }
+         }
+
+         
          
         // lcd_puthex(inputstatus);
          
          //inputstatus = (PINC & 0x0F); // Status des Eingangsports aufnehmen
        
          lcd_gotoxy(0,2);
-         lcd_puthex(inputstatus);
-         lcd_putc(' ');
+         //lcd_puthex(inputstatus);
+         //lcd_putc(' ');
          lcd_putint(outputdelay);
          lcd_putc(' ');
          lcd_puthex(kanaldelay[0]);
@@ -549,6 +576,11 @@ void main (void)
          lcd_puts("ex");
          lcd_puthex(ex);
          */ 
+         
+#pragma mark CHANGE         
+         /* ******************************************* */
+         /* ****************  CHANGE   **************** */
+         /* ******************************************* */
          if (change) // Aenderung: neuer Kanal
          {
             exorcounter++;
@@ -570,7 +602,10 @@ void main (void)
                lcd_putint(aktuellerkanal);
                uint8_t relais = aktuellerkanal+3; // position auf PORTD
                PORTD &= ~(1 << relais);
+               kanaldelay[aktuellerkanal] = 5;
                //inputstatus &= ~(1<<aktuellerkanal);
+         //      lastkanal = aktuellerkanal; // nach ADC aus inputstatus entfernen
+         //      kanalstatus &= ~(1<<aktuellerkanal);
                aktuellerkanal = 0xFF;
                lcd_putc(' ');
                lcd_putint(aktuellerkanal);
@@ -619,11 +654,13 @@ void main (void)
                
                if (neuerkanal < 0xFF)
                {
+                  lastkanal = 0xFF;
                   aktuellerkanal = neuerkanal;
                   uint8_t relais = neuerkanal+3; // position auf PORTD
                   outputdelay = OUTPUTDELAY;
                   PORTD |= (1<< (relais));
                   kanalstatus |= (1<<neuerkanal);
+                  kanaldelay[neuerkanal] = KANALDELAY;
                }
                
                lcd_gotoxy(3,1);
@@ -652,6 +689,7 @@ void main (void)
                 */
                
                // Input
+/*
                for (int kanal=0;kanal < 4;kanal++)
                {
                   uint8_t relais = kanal+3; // position auf PORTD
@@ -674,13 +712,16 @@ void main (void)
                      }
                      if (kanaldelay[kanal] == 0)
                      {
-                        PORTD &= ~(1<<relais);
+    //                    PORTD &= ~(1<<relais);
                      }
                      
                   }
                   
                } // Input
-            }
+    */           
+               
+               
+            } 
             lastinputstatus = inputstatus;
             lcd_gotoxy(10,0);
             //lcd_putc('*');
