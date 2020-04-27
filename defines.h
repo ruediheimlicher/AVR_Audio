@@ -21,6 +21,10 @@
 
 #define KANALDELAY   20
 #define OUTPUTDELAY  40
+
+#define INPUTLEVEL 150 // minimaler inputlevel, verhindert ausschalten bei Pausen
+
+
 /* remote control address and command codes */
 
 #define APPLE_REW    0x08

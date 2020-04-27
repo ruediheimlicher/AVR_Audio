@@ -95,8 +95,15 @@ volatile uint8_t exorcounter = 0; // Status fuer loop
 
 volatile uint8_t aktuellerkanal = 0;
 
+
+
 volatile uint8_t aktiverkanal = 0;
 volatile uint8_t neuerkanal = 0;
+
+
+volatile uint8_t remotechange = 0; // kanalwahl mit remote
+
+uint16_t inputlevel[4] = {0};
 
 // defines loopstatus
 #define SEKUNDE         0
@@ -126,6 +133,7 @@ void audio_remote(uint8_t command)
    //uint16_t cmd = irmp_data.command;
    //audio_remote_command = cmd;
 #pragma mark REMOTE
+   remotechange = 0;
    switch (command)
    {
        /*
@@ -140,6 +148,14 @@ void audio_remote(uint8_t command)
       {
          lcd_gotoxy(10,0);
          lcd_puts("rew  ");
+         lcd_puthex(inputstatus);
+         lcd_putc(' ');
+         lcd_puthex(aktuellerkanal);
+         if (aktuellerkanal && (inputstatus & (1<<(aktuellerkanal-1))))
+         {
+            aktuellerkanal++;
+            remotechange |= (1<<aktuellerkanal);
+         }
          break;
       }
          
@@ -147,7 +163,7 @@ void audio_remote(uint8_t command)
       {
          lcd_gotoxy(10,0);
          lcd_puts("fwd  ");
-
+         lcd_puthex(inputstatus);
          break;
       }
          
@@ -266,13 +282,13 @@ void slaveinit(void)
    PORTB &= ~(1<<PB0);   //LO
 
    DDRC &= ~(1<<AUDIO_A);  // Eingang von Audioquellen
-   PORTC &= ~(1<<AUDIO_A); // LO
+ //  PORTC &= ~(1<<AUDIO_A); // LO
    DDRC &= ~(1<<AUDIO_B);
-   PORTC &= ~(1<<AUDIO_B); // LO
+ //  PORTC &= ~(1<<AUDIO_B); // LO
    DDRC &= ~(1<<AUDIO_C);
-   PORTC &= ~(1<<AUDIO_C); // LO
+ //  PORTC &= ~(1<<AUDIO_C); // LO
    DDRC &= ~(1<<AUDIO_D);
-   PORTC &= ~(1<<AUDIO_D); // LO
+ //  PORTC &= ~(1<<AUDIO_D); // LO
    
    DDRD |= (1<<REL_A);   //Ausgang fuer Relais
    PORTD &= ~(1<<REL_A);   //LO
@@ -317,7 +333,7 @@ void main (void)
    
    irmp_init();                                                            // initialize IRMP
    timer1_init();                                                          // initialize timer1
-
+   initADC();
    
    wdt_disable();
    MCUSR &= ~(1<<WDRF);
@@ -394,6 +410,8 @@ void main (void)
          //lcd_putint(TastaturCount);
          lcd_gotoxy(19,0);
          lcd_putint1(sekundencounter);
+         
+         /*
          lcd_gotoxy(0,3);
          lcd_puthex(protokoll);
          protokoll=0;
@@ -407,7 +425,7 @@ void main (void)
          lcd_putint12(irmpcontrolD);
          irmpcontrolD=0;
          lcd_putc(' ');
-         
+         */
          
          /*
          lcd_puthex(kanaldelay[0]);
@@ -452,7 +470,25 @@ void main (void)
          //lcd_clr_line(0);
          loopstatus &= ~(1<<SEKUNDE);
          
-         inputstatus = (PINC & 0x0F); // Status des Eingangsports aufnehmen
+         // Inputlevel messen
+         lcd_gotoxy(0,3);
+         inputstatus=0;
+         for (int kanal=0;kanal < 4;kanal++)
+         {
+            inputlevel[kanal] = readKanal(kanal);
+            lcd_putint12(inputlevel[kanal]);
+            lcd_putc(' ');
+            if (inputlevel[kanal] > INPUTLEVEL) // kanal aktiv
+            {
+               inputstatus |= (1<<kanal);
+            }
+            //lcd_putint12(inputlevel[kanal]);
+            //lcd_putc(' ');
+         }
+         
+        // lcd_puthex(inputstatus);
+         
+         //inputstatus = (PINC & 0x0F); // Status des Eingangsports aufnehmen
        
          lcd_gotoxy(0,2);
          lcd_puthex(inputstatus);
