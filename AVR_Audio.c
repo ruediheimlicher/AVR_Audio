@@ -51,18 +51,23 @@ void delay_ms(unsigned int ms);
 
 uint8_t buerostatus=0x00;
 
-volatile uint16_t Servotakt=20;					//	Abstand der Impulspakete
-volatile uint16_t Servopause=0x00;				//	Zaehler fuer Pause
-volatile uint16_t Servoimpuls=0x00;				//	Zaehler fuer Impuls
-volatile uint8_t Servoimpulsdauer=20;			//	Dauer des Servoimpulses Definitiv
-volatile uint8_t ServoimpulsdauerPuffer=22;		//	Puffer fuer Servoimpulsdauer
+// Servo
+#define SERVOTAKT 
+
+volatile uint16_t servotaktcounter=0;					//	ISR-counter fuer Servoimpuls-takt
+volatile uint16_t servoimpulscounter=0x00;				//	Zaehler fuer Impulsdauer
+volatile uint8_t servostatus=0;		//	Status fuer Ablauf
+
+
 volatile uint8_t ServoimpulsdauerSpeicher=0;	//	Speicher  fuer Servoimpulsdauer
 volatile uint8_t Potwert=45;
 volatile uint8_t TWI_Pause=1;
-volatile uint8_t ServoimpulsOK=0;				//	Zaehler fuer richtige Impulsdauer
-uint8_t ServoimpulsNullpunkt=23;
-uint8_t ServoimpulsSchrittweite=10;
-uint8_t Servoposition[]={23,33,42,50,60};
+volatile uint8_t servoimpulsOK=0;				//	Zaehler fuer richtige Impulsdauer
+uint8_t servoimpulsNullpunkt=23;
+uint8_t servoimpulsSchrittweite=10;
+//uint8_t Servoposition[]={23,33,42,50,60};
+
+
 volatile uint16_t ADCImpuls=0;
 
 volatile uint8_t twicount=0;
@@ -93,7 +98,7 @@ volatile uint8_t loopstatus = 0; // Status fuer loop
 
 volatile uint8_t exorcounter = 0; // Status fuer loop
 
-volatile uint8_t aktuellerkanal = 0;
+volatile uint8_t aktuellerkanal = 0xFF;
 
 volatile uint8_t lastkanal = 0xFF;
 
@@ -148,7 +153,7 @@ void audio_remote(uint8_t command)
         */
       case APPLE_REW: /*  */
       {
-         lcd_gotoxy(10,0);
+         lcd_gotoxy(6,1);
          lcd_puts("rew");
          lcd_puthex(inputstatus);
          lcd_putc(' ');
@@ -157,14 +162,22 @@ void audio_remote(uint8_t command)
          {
             aktuellerkanal--;
             remotechange |= (1<<aktuellerkanal);
+            lcd_puthex(remotechange);
          }
-         lcd_puthex(remotechange);
+         else 
+         {
+            remotechange = 0;
+            lcd_puts("--");
+         }
+
+
+        
          break;
       }
          
       case APPLE_FWD:
       {
-         lcd_gotoxy(10,0);
+         lcd_gotoxy(6,1);
          lcd_puts("fwd");
          lcd_puthex(inputstatus);
          lcd_putc(' ');
@@ -173,8 +186,14 @@ void audio_remote(uint8_t command)
          {
             aktuellerkanal++;
             remotechange |= (1<<aktuellerkanal);
+            lcd_puthex(remotechange);
          }
-         lcd_puthex(remotechange);
+         else 
+         {
+            remotechange = 0;
+            lcd_puts("++");
+         }
+         
          break;
       }
          
@@ -259,21 +278,45 @@ timer1_init (void)
 
 ISR(TIMER1_COMPA_vect)                                                             // Timer1 output compare A interrupt service routine, called every 1/15000 sec
 {
-   //PORTC ^= (1<<PC5); 
+ //  PORTD ^= (1<<3);
+ //  PORTB ^= (1<<7); 
    (void) irmp_ISR();
    //audio_remote();                                                        // call irmp ISR
    // call other timer interrupt routines...
    //inputstatus = (PINC & 0x0F);
    
+   // Servotakt 50Hz
+   servotaktcounter++;
+   if (servotaktcounter == 300)
+   {
+      servotaktcounter = 0;
+      servostatus |= (1<<0); // flag fuer Impuls setzen
+      PORTB |= (1<<7); 
+   }
+   if (servostatus & (1<<0)) // Impuls on
+   {
+      servotaktcounter++;
+      if (servotaktcounter > 45) // 30: 1ms 60: 2ms
+      {
+         servotaktcounter = 0;
+         PORTB &= ~(1<<7); 
+         servostatus &= ~(1<<0);
+      }
+   }
+   
+   
+   
    timer1counter++;
    if (timer1counter >= F_INTERRUPTS)
    {
+      //PORTB ^= (1<<PB6); 
       timer1counter = 0;
       sekundencounter++;
       //toggleB;
       loopstatus |= (1<<SEKUNDE); // sekundentasks in loop aktivieren
       //inputstatus = (PINC & 0x0F); // Status des Eingangsports aufnehmen
    }
+   
  
 }
 
@@ -408,19 +451,18 @@ void main (void)
    
     while (1)
    {
+   //   PORTB ^= (1<<PB7); 
       //Blinkanzeige
       loopcount0++;
       if (loopcount0==0xFFFF)
       {
-         
+         //PORTB ^= (1<<PB6);
          loopcount0=0;
          LOOPLEDPORT ^=(1<<LOOPLED);
          //delay_ms(10);
          TastaturCount++;
          //lcd_gotoxy(13,1);
          //lcd_putint(TastaturCount);
-         lcd_gotoxy(19,0);
-         lcd_putint1(sekundencounter);
          
          /*
          lcd_gotoxy(0,3);
@@ -477,14 +519,16 @@ void main (void)
 #pragma mark SEKUNDE
       if (loopstatus & (1<<SEKUNDE)) // sekundentask abarbeiten
       {
-         //cli();
-         //lcd_clr_line(0);
+   //      PORTB ^= (1<<PB7); 
+         lcd_gotoxy(19,0);
+         lcd_putint1(sekundencounter);
+
          loopstatus &= ~(1<<SEKUNDE);
          
          // Inputlevel messen
          lcd_gotoxy(0,3);
          inputstatus=0;
-         for (int kanal=0;kanal < 4;kanal++)
+         for (int kanal=0;kanal < 3;kanal++)
          {
             inputlevel[kanal] = readKanal(kanal);
             lcd_putint12(inputlevel[kanal]);
@@ -501,7 +545,7 @@ void main (void)
          
          if (lastkanal < 0xFF) // ein lastkanal festgelegt
          {
-            if (inputlevel[lastkanal] > INPUTLEVEL) // kanal aktiv
+            if (inputlevel[lastkanal] >= INPUTLEVEL) // kanal aktiv
             {
                inputstatus &= ~(1<<lastkanal); // lastkanal entfernen
             }
@@ -521,15 +565,22 @@ void main (void)
          //lcd_puthex(inputstatus);
          //lcd_putc(' ');
          lcd_putint(outputdelay);
+         
          lcd_putc(' ');
+         lcd_putc('L');
+         lcd_puthex(lastkanal);
+         
+          /*
          lcd_puthex(kanaldelay[0]);
+          
+          
          lcd_putc(' ');
          lcd_puthex(kanaldelay[1]);
          lcd_putc(' ');
          lcd_puthex(kanaldelay[2]);
          lcd_putc(' ');
          lcd_puthex(kanaldelay[3]);
-
+          */
          
          
          /*
@@ -581,11 +632,12 @@ void main (void)
          /* ******************************************* */
          /* ****************  CHANGE   **************** */
          /* ******************************************* */
-         if (change) // Aenderung: neuer Kanal
+         
+         if (change) // Aenderung: neuer Kanal oder ein kanal weg
          {
             exorcounter++;
-            lcd_gotoxy(16,3);
-            lcd_puthex(exorcounter);
+            lcd_gotoxy(17,2);
+            lcd_putint(exorcounter);
             
             lcd_gotoxy(0,1);
             lcd_putc('A');
@@ -604,7 +656,7 @@ void main (void)
                PORTD &= ~(1 << relais);
                kanaldelay[aktuellerkanal] = 5;
                //inputstatus &= ~(1<<aktuellerkanal);
-         //      lastkanal = aktuellerkanal; // nach ADC aus inputstatus entfernen
+          //     lastkanal = aktuellerkanal; // nach ADC aus inputstatus entfernen
          //      kanalstatus &= ~(1<<aktuellerkanal);
                aktuellerkanal = 0xFF;
                lcd_putc(' ');
@@ -661,13 +713,16 @@ void main (void)
                   PORTD |= (1<< (relais));
                   kanalstatus |= (1<<neuerkanal);
                   kanaldelay[neuerkanal] = KANALDELAY;
+                  lcd_gotoxy(3,1);
+                  lcd_putc('N');
+                  lcd_putint1(neuerkanal);
+                  
+               
                }
                
-               lcd_gotoxy(3,1);
-               lcd_putc('N');
-               lcd_putint1(neuerkanal);
                
-               
+               lcd_gotoxy(8,1);
+               lcd_puts("             ");
                
                /*
                 lcd_gotoxy(4,1);
@@ -721,8 +776,11 @@ void main (void)
     */           
                
                
-            } 
+            } // else
+            
+            
             lastinputstatus = inputstatus;
+            
             lcd_gotoxy(10,0);
             //lcd_putc('*');
             lcd_putc('I');
@@ -744,7 +802,10 @@ void main (void)
             //lcd_gotoxy(15,2);
             //lcd_puts("--");
          }
-         
+         lcd_gotoxy(0,1);
+         lcd_putc('A');
+         lcd_putint1(aktuellerkanal);
+
          
          
          // Output steuern

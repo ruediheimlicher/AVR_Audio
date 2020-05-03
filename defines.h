@@ -82,8 +82,8 @@
 #define BUEROPORT   PORTD      // Ausgang fuer BUERO
 #define UHRPIN 0
 
-#define SERVOPORT   PORTD      // Ausgang fuer Servo
-#define SERVODDR  DDRD
+#define SERVOPORT   PORTB      // Ausgang fuer Servo
+#define SERVODDR  DDRB
 #define SERVOPIN0 7            // Impuls für Servo
 #define SERVOPIN1 6            // Enable fuer Servo, Active H
 #define SERVOCONTROLPIN 5 // LED
