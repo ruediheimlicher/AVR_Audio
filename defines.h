@@ -20,7 +20,7 @@
 
 
 #define KANALDELAY   20
-#define OUTPUTDELAY  40
+#define OUTPUTDELAY  30
 
 #define INPUTLEVEL 150 // minimaler inputlevel, verhindert ausschalten bei Pausen
 
@@ -82,13 +82,15 @@
 #define BUEROPORT   PORTD      // Ausgang fuer BUERO
 #define UHRPIN 0
 
-#define SERVOPORT   PORTB      // Ausgang fuer Servo
-#define SERVODDR  DDRB
-#define SERVOPIN0 7            // Impuls für Servo
-#define SERVOPIN1 6            // Enable fuer Servo, Active H
-#define SERVOCONTROLPIN 5 // LED
+#define SERVOPORT   PORTC      // Ausgang fuer Servo
+#define SERVODDR  DDRC
+#define SERVOPIN0 4            // Impuls für Servo
+//#define SERVOPIN1 7            // Enable fuer Servo, Active H
+#define SERVOCONTROLBIT 0 // statusbit
 
-
+#define SERVOMIN 18
+#define SERVOMAX 80
+#define SERVOMITTE (SERVOMIN + SERVOMAX)/2
 // Definitionen Slave Buero
 #define UHREIN 0
 #define UHRAUS 1

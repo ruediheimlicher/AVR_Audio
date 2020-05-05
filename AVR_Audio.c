@@ -51,13 +51,15 @@ void delay_ms(unsigned int ms);
 
 uint8_t buerostatus=0x00;
 
+#pragma mark SERVO
 // Servo
-#define SERVOTAKT 
+
 
 volatile uint16_t servotaktcounter=0;					//	ISR-counter fuer Servoimpuls-takt
 volatile uint16_t servoimpulscounter=0x00;				//	Zaehler fuer Impulsdauer
 volatile uint8_t servostatus=0;		//	Status fuer Ablauf
 
+volatile uint8_t servoposition=SERVOMITTE;
 
 volatile uint8_t ServoimpulsdauerSpeicher=0;	//	Speicher  fuer Servoimpulsdauer
 volatile uint8_t Potwert=45;
@@ -200,8 +202,11 @@ void audio_remote(uint8_t command)
       case APPLE_PLUS:
       {
          lcd_gotoxy(10,0);
-         lcd_puts("plus ");
-
+         lcd_puts("+");
+         if (servoposition < SERVOMAX)
+         {
+            servoposition++;
+         }
          break;
       }
          
@@ -209,6 +214,10 @@ void audio_remote(uint8_t command)
       {
          lcd_gotoxy(10,0);
          lcd_puts("minus");
+         if (servoposition > SERVOMIN)
+         {
+            servoposition--;
+         }
 
          break;
       }
@@ -290,17 +299,17 @@ ISR(TIMER1_COMPA_vect)                                                          
    if (servotaktcounter == 300)
    {
       servotaktcounter = 0;
-      servostatus |= (1<<0); // flag fuer Impuls setzen
-      PORTB |= (1<<7); 
+      servostatus |= (1<<SERVOCONTROLBIT); // flag fuer Impuls setzen
+      SERVOPORT |= (1<<SERVOPIN0); 
    }
-   if (servostatus & (1<<0)) // Impuls on
+   if (servostatus & (1<<SERVOCONTROLBIT)) // Impuls on
    {
       servotaktcounter++;
-      if (servotaktcounter > 45) // 30: 1ms 60: 2ms
+      if (servotaktcounter > servoposition) // 30: 1ms 60: 2ms
       {
          servotaktcounter = 0;
-         PORTB &= ~(1<<7); 
-         servostatus &= ~(1<<0);
+         SERVOPORT &= ~(1<<SERVOPIN0); 
+         servostatus &= ~(1<<SERVOCONTROLBIT);
       }
    }
    
@@ -325,7 +334,11 @@ void slaveinit(void)
 	LOOPLEDDDR |= (1<<LOOPLED);		//Pin z von PORT D als Ausgang fuer loop-LED
 //	DDRB &= ~(1<<PB1);	//Bit 1 von PORT B als Eingang fŸr IR
 //	PORTB |= (1<<PB1);	//Pull-up
-
+   
+   // Servo
+   SERVODDR |= (1<<SERVOPIN0);
+   SERVOPORT |= (1<<SERVOPIN0);// LO
+   
    DDRC |= (1<<PC4);   //Ausgang fuer control A
    PORTC |= (1<<PC4);   //Pull-up
 
@@ -524,8 +537,10 @@ void main (void)
          lcd_putint1(sekundencounter);
 
          loopstatus &= ~(1<<SEKUNDE);
+
          
-         // Inputlevel messen
+         // Inputlevel messen, inputstatus anpassen
+         
          lcd_gotoxy(0,3);
          inputstatus=0;
          for (int kanal=0;kanal < 3;kanal++)
@@ -533,7 +548,7 @@ void main (void)
             inputlevel[kanal] = readKanal(kanal);
             lcd_putint12(inputlevel[kanal]);
             lcd_putc(' ');
-            if (inputlevel[kanal] > INPUTLEVEL) // kanal aktiv
+            if (inputlevel[kanal] > INPUTLEVEL) // kanal aktiv, level gross genug
             {
                inputstatus |= (1<<kanal);
             }
@@ -615,6 +630,10 @@ void main (void)
          lcd_puts("IC");
          lcd_puthex(inputstatus);
          
+         lcd_gotoxy(11,0);
+         lcd_puts("S:");
+         lcd_putint(servoposition);
+         
          //Aenderung abfragen
          uint8_t change = inputstatus ^ lastinputstatus; 
          
@@ -669,7 +688,7 @@ void main (void)
             {
                PORTD &= ~((1 << 3) | (1 << 4)| (1 << 5)| (1 << 6)); // alle relais off
                neuerkanal = 0xFF;
-               inputstatus = 0;
+               
                //break;
             }
             else
@@ -678,7 +697,7 @@ void main (void)
                // neuen aktuellen Kanal suchen
                neuerkanal = 0xFF;
                
-               if (kanalnew) // neuer Kanal dazugekommen
+               if (kanalnew) // neuer Kanal dazugekommen (kanalnew = change & inputstatus;)
                {
                   for (int kanal=0;kanal < 4;kanal++)
                   {
@@ -700,8 +719,6 @@ void main (void)
                   }
                   
                }
-               
-               
                
                
                if (neuerkanal < 0xFF)
@@ -778,7 +795,7 @@ void main (void)
                
             } // else
             
-            
+            // lastinputstatus aktualisieren
             lastinputstatus = inputstatus;
             
             lcd_gotoxy(10,0);
