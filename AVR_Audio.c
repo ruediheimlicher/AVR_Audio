@@ -59,7 +59,7 @@ volatile uint16_t servotaktcounter=0;					//	ISR-counter fuer Servoimpuls-takt
 volatile uint16_t servoimpulscounter=0x00;				//	Zaehler fuer Impulsdauer
 volatile uint8_t servostatus=0;		//	Status fuer Ablauf
 
-volatile uint8_t servoposition=SERVOMITTE;
+volatile uint8_t servoposition=SERVOSTART;
 
 volatile uint8_t ServoimpulsdauerSpeicher=0;	//	Speicher  fuer Servoimpulsdauer
 volatile uint8_t Potwert=45;
@@ -106,6 +106,7 @@ volatile uint8_t lastkanal = 0xFF;
 
 
 
+
 volatile uint8_t aktiverkanal = 0;
 volatile uint8_t neuerkanal = 0;
 
@@ -121,7 +122,7 @@ uint16_t inputlevel[4] = {0};
 uint16_t kanaldelay[4] = {0};
 uint16_t kanaldelayA = KANALDELAY;
 uint16_t kanaldelayB = KANALDELAY;
-uint16_t kanaldelayC= KANALDELAY;
+uint16_t kanaldelayC = KANALDELAY;
 uint16_t kanaldelayD = KANALDELAY;
 
 uint8_t kanalarray[4] = {0xFF}; // Liste fuer  Kanaele mit input
@@ -661,6 +662,7 @@ void main (void)
             lcd_gotoxy(0,1);
             lcd_putc('A');
             lcd_putint1(aktuellerkanal);
+            
             
             uint8_t kanalnew = change & inputstatus; 
             // > 0: Kanal von change ist neu;   0: Kanal von change ist weg

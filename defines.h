@@ -91,6 +91,7 @@
 #define SERVOMIN 18
 #define SERVOMAX 80
 #define SERVOMITTE (SERVOMIN + SERVOMAX)/2
+#define SERVOSTART 36
 // Definitionen Slave Buero
 #define UHREIN 0
 #define UHRAUS 1
