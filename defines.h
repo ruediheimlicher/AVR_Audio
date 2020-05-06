@@ -22,7 +22,7 @@
 #define KANALDELAY   20
 #define OUTPUTDELAY  30
 
-#define INPUTLEVEL 150 // minimaler inputlevel, verhindert ausschalten bei Pausen
+#define INPUTLEVEL 130 // minimaler inputlevel, verhindert ausschalten bei Pausen
 
 
 /* remote control address and command codes */
@@ -91,7 +91,7 @@
 #define SERVOMIN 18
 #define SERVOMAX 80
 #define SERVOMITTE (SERVOMIN + SERVOMAX)/2
-#define SERVOSTART 36
+#define SERVOSTART 32
 // Definitionen Slave Buero
 #define UHREIN 0
 #define UHRAUS 1

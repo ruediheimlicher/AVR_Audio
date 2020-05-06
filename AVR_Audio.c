@@ -536,11 +536,20 @@ void main (void)
          lcd_gotoxy(19,0);
          lcd_putint1(sekundencounter);
 
+         lcd_gotoxy(0,1);
+         lcd_putc('a');
+         lcd_putint1(aktiverkanal);
+   
+         lcd_gotoxy(10,1);
+         lcd_putc('L');
+         lcd_puthex(lastkanal);
+
+
          loopstatus &= ~(1<<SEKUNDE);
 
-         
-         // Inputlevel messen, inputstatus anpassen
-         
+         /* ******************************************* */
+         // Inputlevel messen, inputstatus setzen
+         /* ******************************************* */
          lcd_gotoxy(0,3);
          inputstatus=0;
          for (int kanal=0;kanal < 3;kanal++)
@@ -552,100 +561,64 @@ void main (void)
             {
                inputstatus |= (1<<kanal);
             }
-            
-             //lcd_putint12(inputlevel[kanal]);
-            //lcd_putc(' ');
          }
          
+         /* ******************************************* */
+         // inputstatus anpassen: 
+         /* ******************************************* */   
          
          if (lastkanal < 0xFF) // ein lastkanal festgelegt
          {
-            if (inputlevel[lastkanal] >= INPUTLEVEL) // kanal aktiv
+            if (inputlevel[lastkanal] >= INPUTLEVEL) // lastkanal: pegel ist noch zu gross
             {
                inputstatus &= ~(1<<lastkanal); // lastkanal entfernen
             }
-           else
+            else // lastkanal: pegel nicht mehr relevant
            {
               lastkanal = 0xFF;
            }
          }
 
+        
+          //lcd_putc(' ');
          
          
-        // lcd_puthex(inputstatus);
-         
-         //inputstatus = (PINC & 0x0F); // Status des Eingangsports aufnehmen
-       
-         lcd_gotoxy(0,2);
-         //lcd_puthex(inputstatus);
-         //lcd_putc(' ');
-         lcd_putint(outputdelay);
-         
-         lcd_putc(' ');
-         lcd_putc('L');
-         lcd_puthex(lastkanal);
-         
-          /*
+          
+         lcd_gotoxy(0,2);  
          lcd_puthex(kanaldelay[0]);
-          
-          
          lcd_putc(' ');
          lcd_puthex(kanaldelay[1]);
          lcd_putc(' ');
          lcd_puthex(kanaldelay[2]);
          lcd_putc(' ');
          lcd_puthex(kanaldelay[3]);
-          */
-         
-         
-         /*
-         aktiverkanal=0xFF;
-         // aktiven Kanal suchen
-         for (int kanal=0;kanal < 4;kanal++)
-         {
-            if (inputstatus & (1<<kanal))
-            {
-              // if (kanalarray[kanal] == 0) // neuer Kanal
-               {
-                  aktiverkanal = kanal;
-               }
-               kanalarray[kanal] = 1; 
-            }
-            else
-            {
-               kanalarray[kanal] = 0;
-            }
-         }
           
-         lcd_gotoxy(0,1);
-         lcd_putc('A');
-         lcd_puthex(aktiverkanal);
-         */
          
+         lcd_gotoxy(16,2);
+         lcd_putint(outputdelay);
+         
+         
+           
+         /* ******************************************* */
+         // relaisstatus abfragen
+         /* ******************************************* */
          lcd_gotoxy(0,0);
-         lcd_puts("OD");
+         lcd_puts("PD");
          uint8_t d = PIND;
          lcd_puthex((PIND & 0x78)>>3); // bit 3-6
          lcd_putc(' ');
-         lcd_puts("IC");
+         lcd_puts("IS");
          lcd_puthex(inputstatus);
          
-         lcd_gotoxy(11,0);
-         lcd_puts("S:");
+         lcd_gotoxy(16,3);
+         lcd_puts("S");
          lcd_putint(servoposition);
          
+         /* ******************************************* */
          //Aenderung abfragen
+         /* ******************************************* */
          uint8_t change = inputstatus ^ lastinputstatus; 
          
-         /*
-         lcd_gotoxy(8,2);
-         lcd_puts("ch");
-         lcd_puthex(change);
-         uint8_t ex = change & inputstatus;
-         lcd_putc(' ');
-         lcd_puts("ex");
-         lcd_puthex(ex);
-         */ 
          
 #pragma mark CHANGE         
          /* ******************************************* */
@@ -655,18 +628,21 @@ void main (void)
          if (change) // Aenderung: neuer Kanal oder ein kanal weg
          {
             exorcounter++;
-            lcd_gotoxy(17,2);
+            lcd_gotoxy(17,3);
             lcd_putint(exorcounter);
             
-            lcd_gotoxy(0,1);
-            lcd_putc('A');
-            lcd_putint1(aktuellerkanal);
+ //           lcd_gotoxy(0,1);
+ //           lcd_putc('A');
+ //           lcd_putint1(aktuellerkanal);
             
             
             uint8_t kanalnew = change & inputstatus; 
             // > 0: Kanal von change ist neu;   0: Kanal von change ist weg
             
-            
+            /* ******************************************* */
+            // aktuellen Kanal ausschalten, sofern da
+            /* ******************************************* */
+           
             if (aktuellerkanal < 0xFF) // aktueller kanal vorhanden, ausschalten
             {
                lcd_gotoxy(8,1);
@@ -677,7 +653,8 @@ void main (void)
                kanaldelay[aktuellerkanal] = 5;
                //inputstatus &= ~(1<<aktuellerkanal);
           //     lastkanal = aktuellerkanal; // nach ADC aus inputstatus entfernen
-         //      kanalstatus &= ~(1<<aktuellerkanal);
+               
+               kanalstatus &= ~(1<<aktuellerkanal); // aktuellen Kanal entfernen
                aktuellerkanal = 0xFF;
                lcd_putc(' ');
                lcd_putint(aktuellerkanal);
@@ -705,6 +682,11 @@ void main (void)
                      if ((change) & (1<<kanal))
                      {
                         neuerkanal = kanal;
+                        kanaldelay[kanal] = KANALDELAY;
+                     }
+                     else
+                     {
+                        kanaldelay[kanal] = 3;
                      }
                   }
                }
@@ -716,31 +698,43 @@ void main (void)
                      if ((inputstatus) & (1<<kanal))
                      {
                         neuerkanal = kanal;
+                        kanaldelay[kanal] = KANALDELAY;
                      }
+                     else
+                     {
+                        kanaldelay[kanal] = 3;
+                     }
+
                   }
                   
                }
                
+               /* ******************************************* */
+               // neuen Kanal ausschalten, aktuellen Kanal neu setzen
+               /* ******************************************* */
                
                if (neuerkanal < 0xFF)
                {
                   lastkanal = 0xFF;
-                  aktuellerkanal = neuerkanal;
+                  
+                  // neuen Kanal einschalten
                   uint8_t relais = neuerkanal+3; // position auf PORTD
-                  outputdelay = OUTPUTDELAY;
+                  outputdelay = OUTPUTDELAY; // outputelay aktualisieren
                   PORTD |= (1<< (relais));
-                  kanalstatus |= (1<<neuerkanal);
-                  kanaldelay[neuerkanal] = KANALDELAY;
-                  lcd_gotoxy(3,1);
+                  kanalstatus |= (1<<neuerkanal); 
+                //  kanaldelay[neuerkanal] = KANALDELAY;
+                  lcd_gotoxy(6,1);
                   lcd_putc('N');
                   lcd_putint1(neuerkanal);
                   
+                  // aktuellen Kanal neu setzen
+                  aktuellerkanal = neuerkanal;
                
                }
                
                
-               lcd_gotoxy(8,1);
-               lcd_puts("             ");
+              // lcd_gotoxy(8,1);
+             //  lcd_puts("             ");
                
                /*
                 lcd_gotoxy(4,1);
@@ -820,7 +814,7 @@ void main (void)
             //lcd_gotoxy(15,2);
             //lcd_puts("--");
          }
-         lcd_gotoxy(0,1);
+         lcd_gotoxy(3,1);
          lcd_putc('A');
          lcd_putint1(aktuellerkanal);
 
@@ -829,7 +823,7 @@ void main (void)
          // Output steuern
          if (((inputstatus & 0x0F) > 0) && (loopstatus & (1<<AMP_ON)))// mindestens ein Eingang aktiv
          {
-            loopstatus |= (1<<AMP_ON);
+            //loopstatus |= (1<<AMP_ON);
             outputdelay = OUTPUTDELAY; // Maximaldauer
             //PORTB |= (1<<PB0);
          }
@@ -842,23 +836,26 @@ void main (void)
             
             //PORTB &= ~(1<<PB0);
          }
+         
+         if (outputdelay) // Output soll ON sein
+         {
+            loopstatus |= (1<<AMP_ON);
+            PORTB |= (1<<PB0); // ON
+            
+         }
+         else
+         {
+            loopstatus &= ~(1<<AMP_ON);
+            PORTB &= ~(1<<PB0); // OFF
+            PORTD &= ~((1 << 3) | (1 << 4)| (1 << 5)| (1 << 6)); // alle relais off
+         }
+
+         
         
          sei(); 
       } // sekunde
       
-      if (outputdelay) // Output soll ON sein
-      {
-         loopstatus |= (1<<AMP_ON);
-         PORTB |= (1<<PB0); // ON
-         
-      }
-      else
-      {
-         loopstatus &= ~(1<<AMP_ON);
-         PORTB &= ~(1<<PB0); // OFF
-         PORTD &= ~((1 << 3) | (1 << 4)| (1 << 5)| (1 << 6)); // alle relais off
-      }
-     
+      
       
       
       
