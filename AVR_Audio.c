@@ -106,7 +106,6 @@ volatile uint8_t lastkanal = 0xFF;
 
 
 
-
 volatile uint8_t aktiverkanal = 0;
 volatile uint8_t neuerkanal = 0;
 
