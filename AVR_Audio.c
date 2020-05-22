@@ -302,6 +302,7 @@ ISR(TIMER1_COMPA_vect)                                                          
       servostatus |= (1<<SERVOCONTROLBIT); // flag fuer Impuls setzen
       SERVOPORT |= (1<<SERVOPIN0); 
    }
+   
    if (servostatus & (1<<SERVOCONTROLBIT)) // Impuls on
    {
       servotaktcounter++;
@@ -327,6 +328,43 @@ ISR(TIMER1_COMPA_vect)                                                          
    }
    
  
+}
+
+
+void timer2 (uint8_t wert) 
+{ 
+   //   TCCR2 |= (1<<CS02);            //8-Bit Timer, Timer clock = system clock/256
+   
+   //Takt fuer Servo
+   TCCR2 |= (1<<CS20)|(1<<CS21);   //Takt /64   Intervall 64 us
+   
+   TCCR2 |= (1<<WGM21);      //   ClearTimerOnCompareMatch CTC
+   
+   //OC2 akt
+   //   TCCR2 |= (1<<COM20);      //   OC2 Pin zuruecksetzen bei CTC
+   
+   
+   TIFR |= (1<<TOV2);             //Clear TOV2 Timer/Counter Overflow Flag. clear pending interrupts
+   TIMSK |= (1<<OCIE2);         //CTC Interrupt aktivieren
+   
+   TCNT2 = 0x00;               //Zaehler zuruecksetzen
+   
+   OCR2 = wert;               //Setzen des Compare Registers auf Servoimpulsdauer
+} 
+
+ISR(TIMER2_COMP_vect) // Schaltet Impuls an SERVOPIN0 aus
+{
+   if (servostatus & (1<<SERVOCONTROLBIT)) // Impuls on, takt zaehlen
+   {
+      servotaktcounter++;
+      if (servotaktcounter > servoposition) // 30: 1ms 60: 2ms
+      {
+         servotaktcounter = 0;
+         SERVOPORT &= ~(1<<SERVOPIN0); // Impuls OFF
+         servostatus &= ~(1<<SERVOCONTROLBIT); // Impuls fertig, wird in ISR1 gesetzt
+      }
+   }
+
 }
 
 void slaveinit(void)
