@@ -88,10 +88,10 @@
 //#define SERVOPIN1 7            // Enable fuer Servo, Active H
 #define SERVOCONTROLBIT 0 // statusbit
 
-#define SERVOMIN 18
-#define SERVOMAX 80
+#define SERVOMIN 10
+#define SERVOMAX 120 
 #define SERVOMITTE (SERVOMIN + SERVOMAX)/2
-#define SERVOSTART 32
+#define SERVOSTART 20
 // Definitionen Slave Buero
 #define UHREIN 0
 #define UHRAUS 1
@@ -114,5 +114,10 @@
 #define AUSSEN         1   //   Byte fuer Aussentemperatur
 #define STATUS         3   //   Byte fuer Status
 #define BRENNERPIN      2   //   PIN 2 von PORT B als Eingang fuer Brennerstatus
+
+
+
+#define TIMER0_STARTWERT   0x40
+
 
 #endif /* defines_h */

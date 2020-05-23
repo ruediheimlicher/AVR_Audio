@@ -202,7 +202,7 @@ void audio_remote(uint8_t command)
       case APPLE_PLUS:
       {
          lcd_gotoxy(10,0);
-         lcd_puts("+");
+         lcd_puts("+  ");
          if (servoposition < SERVOMAX)
          {
             servoposition++;
@@ -213,7 +213,7 @@ void audio_remote(uint8_t command)
       case APPLE_MINUS:
       {
          lcd_gotoxy(10,0);
-         lcd_puts("minus");
+         lcd_puts("-  ");
          if (servoposition > SERVOMIN)
          {
             servoposition--;
@@ -225,7 +225,7 @@ void audio_remote(uint8_t command)
       case APPLE_PLAY:
       {
          lcd_gotoxy(10,0);
-         lcd_puts("play ");
+         lcd_puts("play");
          PORTD &= ~((1 << 3) | (1 << 4)| (1 << 5)| (1 << 6)); 
          break;
       }
@@ -233,7 +233,7 @@ void audio_remote(uint8_t command)
       case APPLE_MENU:
       {
          lcd_gotoxy(10,0);
-         lcd_puts("menu: ");
+         lcd_puts("menu");
          loopstatus ^= (1<<AMP_ON);
          if (loopstatus & (1<<AMP_ON))
          {
@@ -257,12 +257,45 @@ void audio_remote(uint8_t command)
       }
    }
 }
+/*
+void timer0 (void) 
+{ 
+   // Timer fuer Exp
+   TCCR0 |= (1<<CS00);
+   //TCCR0 |= (1<<CS01);                  // clock   /8
+   //TCCR0 |= (1<<CS01)|(1<<CS02);         // clock   /64
+   //TCCR0 |= (1<<CS02)| (1<<CS02);         // clock   /256
+   //TCCR0 |= (1<<CS00)|(1<<CS02);         // clock /1024
+   
+   //TIFR |= (1<<TOV0);                     //Clear TOV0 Timer/Counter Overflow Flag. clear pending interrupts
+   TIMSK |= (1<<TOIE0);                     //Overflow Interrupt aktivieren
+   //TCNT0 = TIMER0_STARTWERT;               //RŸcksetzen des Timers
+   
+}
 
-
-
+ISR (TIMER0_OVF_vect) 
+{ 
+//   PORTC ^= (1<<PC5); 
+   
+   
+   if (servostatus & (1<<SERVOCONTROLBIT)) // Impuls on, takt zaehlen
+   {
+      servotaktcounter++;
+      if (servotaktcounter > servoposition) // 30: 1ms 60: 2ms
+      {
+         servotaktcounter = 0;
+         SERVOPORT &= ~(1<<SERVOPIN0); // Impuls OFF
+         servostatus &= ~(1<<SERVOCONTROLBIT); // Impuls fertig, wird in ISR1 gesetzt
+      }
+   }
+ 
+   
+}
+*/
 static void
 timer1_init (void)
 {
+   /*
 #if defined (__AVR_ATtiny45__) || defined (__AVR_ATtiny85__)                // ATtiny45 / ATtiny85:
    
 #if F_CPU >= 16000000L
@@ -283,6 +316,10 @@ timer1_init (void)
 #else
    TIMSK   = 1 << OCIE1A;                                                  // OCIE1A: Interrupt by timer compare
 #endif
+ */  
+   OCR1A   =  (F_CPU / F_INTERRUPTS) - 1;                                  // compare value: 1/15000 of CPU frequency
+   TCCR1B  = (1 << WGM12) | (1 << CS10);                                   // switch CTC Mode on, set prescaler to 1
+   TIMSK   = 1 << OCIE1A; 
 }
 
 ISR(TIMER1_COMPA_vect)                                                             // Timer1 output compare A interrupt service routine, called every 1/15000 sec
@@ -290,10 +327,11 @@ ISR(TIMER1_COMPA_vect)                                                          
  //  PORTD ^= (1<<3);
  //  PORTB ^= (1<<7); 
    (void) irmp_ISR();
+   
    //audio_remote();                                                        // call irmp ISR
    // call other timer interrupt routines...
    //inputstatus = (PINC & 0x0F);
-   
+//   PORTC ^= (1<<PC5); 
    // Servotakt 50Hz
    servotaktcounter++;
    if (servotaktcounter == 300)
@@ -302,6 +340,7 @@ ISR(TIMER1_COMPA_vect)                                                          
       servostatus |= (1<<SERVOCONTROLBIT); // flag fuer Impuls setzen
       SERVOPORT |= (1<<SERVOPIN0); 
    }
+   
    
    if (servostatus & (1<<SERVOCONTROLBIT)) // Impuls on
    {
@@ -330,30 +369,34 @@ ISR(TIMER1_COMPA_vect)                                                          
  
 }
 
+#define TIMER2_PRESCALER      (1 << CS21) //| (1 << CS20)
 
 void timer2 (uint8_t wert) 
 { 
    //   TCCR2 |= (1<<CS02);            //8-Bit Timer, Timer clock = system clock/256
    
    //Takt fuer Servo
-   TCCR2 |= (1<<CS20)|(1<<CS21);   //Takt /64   Intervall 64 us
-   
-   TCCR2 |= (1<<WGM21);      //   ClearTimerOnCompareMatch CTC
+   //TCCR2 |= (1<<CS21);
+   //TCCR2 |= (1<<CS20)|(1<<CS21);   //Takt /64   Intervall 64 us
+   TCCR2 = 0;
+   TCCR2 |= (1<<WGM21) | TIMER2_PRESCALER;      //   ClearTimerOnCompareMatch CTC
    
    //OC2 akt
    //   TCCR2 |= (1<<COM20);      //   OC2 Pin zuruecksetzen bei CTC
    
    
-   TIFR |= (1<<TOV2);             //Clear TOV2 Timer/Counter Overflow Flag. clear pending interrupts
+   //TIFR |= (1<<TOV2);             //Clear TOV2 Timer/Counter Overflow Flag. clear pending interrupts
    TIMSK |= (1<<OCIE2);         //CTC Interrupt aktivieren
    
-   TCNT2 = 0x00;               //Zaehler zuruecksetzen
+   //TCNT2 = 0x00;               //Zaehler zuruecksetzen
    
    OCR2 = wert;               //Setzen des Compare Registers auf Servoimpulsdauer
 } 
 
 ISR(TIMER2_COMP_vect) // Schaltet Impuls an SERVOPIN0 aus
 {
+   PORTC ^= (1<<PC5);
+   
    if (servostatus & (1<<SERVOCONTROLBIT)) // Impuls on, takt zaehlen
    {
       servotaktcounter++;
@@ -440,6 +483,8 @@ void main (void)
    timer1_init();                                                          // initialize timer1
    initADC();
    
+  // timer0();
+   
    wdt_disable();
    MCUSR &= ~(1<<WDRF);
    wdt_reset();
@@ -498,6 +543,8 @@ void main (void)
       
    }
    lcd_clr_line(0);
+ //  timer2(50);
+
    sei ();                                                                 // enable interrupts
    
     while (1)
@@ -581,6 +628,12 @@ void main (void)
          lcd_gotoxy(10,1);
          lcd_putc('L');
          lcd_puthex(lastkanal);
+         
+         lcd_gotoxy(0,2);  
+         lcd_putint(servoposition);
+         //lcd_putc(' ');
+         //lcd_putint12(servotaktcounter);
+
 
 
          loopstatus &= ~(1<<SEKUNDE);
@@ -621,7 +674,7 @@ void main (void)
           //lcd_putc(' ');
          
          
-          
+         /* 
          lcd_gotoxy(0,2);  
          lcd_puthex(kanaldelay[0]);
          lcd_putc(' ');
@@ -634,7 +687,7 @@ void main (void)
          
          lcd_gotoxy(16,2);
          lcd_putint(outputdelay);
-         
+         */
          
            
          /* ******************************************* */
@@ -900,6 +953,7 @@ void main (void)
  //     PORTB &= ~(1<<PB1); 
 #pragma mark get DATA      
       // IRMP
+      
       if (irmp_get_data (&irmp_data))
       {
          // got an IR message, do something
