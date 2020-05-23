@@ -93,6 +93,7 @@ volatile uint8_t inputstatus = 0; // Eingaenge am ADC abfragen
 volatile uint8_t lastinputstatus = 0; // letzter Status
 volatile uint8_t kanalstatus = 0; // aktiver Kanal
 
+volatile uint8_t isrcounter = 0;
 
 volatile uint8_t outputstatus = 0; // status fuer Ausgang
 
@@ -317,7 +318,8 @@ timer1_init (void)
    TIMSK   = 1 << OCIE1A;                                                  // OCIE1A: Interrupt by timer compare
 #endif
  */  
-   OCR1A   =  (F_CPU / F_INTERRUPTS) - 1;                                  // compare value: 1/15000 of CPU frequency
+   OCR1A   =  ((F_CPU /( F_INTERRUPTS )))/2 - 1;                                  // compare value: 1/15000 of CPU frequency
+ //  OCR1A   = 534/2;
    TCCR1B  = (1 << WGM12) | (1 << CS10);                                   // switch CTC Mode on, set prescaler to 1
    TIMSK   = 1 << OCIE1A; 
 }
@@ -326,8 +328,13 @@ ISR(TIMER1_COMPA_vect)                                                          
 {
  //  PORTD ^= (1<<3);
  //  PORTB ^= (1<<7); 
-   (void) irmp_ISR();
-   
+   isrcounter++;
+   if ((isrcounter % 2) == 0)
+   {
+   //PORTC ^= (1<<PC5); 
+   irmp_ISR();
+   }
+ //  irmp_ISR();
    //audio_remote();                                                        // call irmp ISR
    // call other timer interrupt routines...
    //inputstatus = (PINC & 0x0F);
@@ -339,6 +346,7 @@ ISR(TIMER1_COMPA_vect)                                                          
       servotaktcounter = 0;
       servostatus |= (1<<SERVOCONTROLBIT); // flag fuer Impuls setzen
       SERVOPORT |= (1<<SERVOPIN0); 
+      servoimpulscounter = 0;
    }
    
    
@@ -354,9 +362,8 @@ ISR(TIMER1_COMPA_vect)                                                          
    }
    
    
-   
    timer1counter++;
-   if (timer1counter >= F_INTERRUPTS)
+   if (timer1counter >= 2*F_INTERRUPTS)
    {
       //PORTB ^= (1<<PB6); 
       timer1counter = 0;
@@ -371,6 +378,7 @@ ISR(TIMER1_COMPA_vect)                                                          
 
 #define TIMER2_PRESCALER      (1 << CS21) //| (1 << CS20)
 
+/*
 void timer2 (uint8_t wert) 
 { 
    //   TCCR2 |= (1<<CS02);            //8-Bit Timer, Timer clock = system clock/256
@@ -395,21 +403,21 @@ void timer2 (uint8_t wert)
 
 ISR(TIMER2_COMP_vect) // Schaltet Impuls an SERVOPIN0 aus
 {
-   PORTC ^= (1<<PC5);
+//   PORTC ^= (1<<PC5);
    
    if (servostatus & (1<<SERVOCONTROLBIT)) // Impuls on, takt zaehlen
    {
-      servotaktcounter++;
-      if (servotaktcounter > servoposition) // 30: 1ms 60: 2ms
+      servoimpulscounter++;
+      if (servoimpulscounter > servoposition) // 30: 1ms 60: 2ms
       {
-         servotaktcounter = 0;
+         servoimpulscounter = 0;
          SERVOPORT &= ~(1<<SERVOPIN0); // Impuls OFF
          servostatus &= ~(1<<SERVOCONTROLBIT); // Impuls fertig, wird in ISR1 gesetzt
       }
    }
 
 }
-
+*/
 void slaveinit(void)
 {
 	LOOPLEDDDR |= (1<<LOOPLED);		//Pin z von PORT D als Ausgang fuer loop-LED
@@ -485,6 +493,8 @@ void main (void)
    
   // timer0();
    
+ //  timer2(50);
+   
    wdt_disable();
    MCUSR &= ~(1<<WDRF);
    wdt_reset();
@@ -543,7 +553,8 @@ void main (void)
       
    }
    lcd_clr_line(0);
- //  timer2(50);
+   uint16_t oc = ((F_CPU /( F_INTERRUPTS ))) - 1;
+   lcd_putint12(oc);
 
    sei ();                                                                 // enable interrupts
    
@@ -631,8 +642,8 @@ void main (void)
          
          lcd_gotoxy(0,2);  
          lcd_putint(servoposition);
-         //lcd_putc(' ');
-         //lcd_putint12(servotaktcounter);
+         lcd_putc(' ');
+         lcd_putint12(code);
 
 
 

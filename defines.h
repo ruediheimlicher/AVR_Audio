@@ -88,10 +88,10 @@
 //#define SERVOPIN1 7            // Enable fuer Servo, Active H
 #define SERVOCONTROLBIT 0 // statusbit
 
-#define SERVOMIN 10
-#define SERVOMAX 120 
+#define SERVOMIN 40
+#define SERVOMAX 145 
 #define SERVOMITTE (SERVOMIN + SERVOMAX)/2
-#define SERVOSTART 20
+#define SERVOSTART 50
 // Definitionen Slave Buero
 #define UHREIN 0
 #define UHRAUS 1
