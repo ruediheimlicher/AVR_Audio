@@ -38,8 +38,6 @@ extern IRMP_DATA   irmp_data;
 uint8_t EEMEM WDT_ErrCount0;	// Akkumulierte WDT Restart Events
 uint8_t EEMEM WDT_ErrCount1;	// WDT Restart Events nach wdt-reset
 
-void eep_write_wochentag(uint8_t *ablauf[24], uint8_t *tag);
-
 
 static volatile uint8_t SlaveStatus=0x00; //status
 
