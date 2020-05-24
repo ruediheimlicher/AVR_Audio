@@ -86,12 +86,16 @@
 #define SERVODDR  DDRC
 #define SERVOPIN0 4            // Impuls für Servo
 //#define SERVOPIN1 7            // Enable fuer Servo, Active H
-#define SERVOCONTROLBIT 0 // statusbit
+#define SERVOCONTROLBIT    0 // statusbit
+#define SERVOHOLDBIT       1 // Impuls sol noch stehen
 
 #define SERVOMIN 40
 #define SERVOMAX 145 
 #define SERVOMITTE (SERVOMIN + SERVOMAX)/2
-#define SERVOSTART 50
+#define SERVOSTART 60
+#define SERVOHOLD 50    // Anz Impulse pro remoteevent
+
+
 // Definitionen Slave Buero
 #define UHREIN 0
 #define UHRAUS 1

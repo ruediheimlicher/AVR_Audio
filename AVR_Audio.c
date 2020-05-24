@@ -56,13 +56,13 @@ uint8_t buerostatus=0x00;
 volatile uint16_t servotaktcounter=0;					//	ISR-counter fuer Servoimpuls-takt
 volatile uint16_t servoimpulscounter=0x00;				//	Zaehler fuer Impulsdauer
 volatile uint8_t servostatus=0;		//	Status fuer Ablauf
+volatile uint8_t servoimpulshold=SERVOHOLD;   // counter fuer Hold-Zeit des Impuls
 
 volatile uint8_t servoposition=SERVOSTART;
 
 volatile uint8_t ServoimpulsdauerSpeicher=0;	//	Speicher  fuer Servoimpulsdauer
 volatile uint8_t Potwert=45;
 volatile uint8_t TWI_Pause=1;
-volatile uint8_t servoimpulsOK=0;				//	Zaehler fuer richtige Impulsdauer
 uint8_t servoimpulsNullpunkt=23;
 uint8_t servoimpulsSchrittweite=10;
 //uint8_t Servoposition[]={23,33,42,50,60};
@@ -205,6 +205,7 @@ void audio_remote(uint8_t command)
          if (servoposition < SERVOMAX)
          {
             servoposition++;
+            servoimpulshold = SERVOHOLD; 
          }
          break;
       }
@@ -216,6 +217,7 @@ void audio_remote(uint8_t command)
          if (servoposition > SERVOMIN)
          {
             servoposition--;
+            servoimpulshold = SERVOHOLD; 
          }
 
          break;
@@ -339,12 +341,14 @@ ISR(TIMER1_COMPA_vect)                                                          
 //   PORTC ^= (1<<PC5); 
    // Servotakt 50Hz
    servotaktcounter++;
-   if (servotaktcounter == 300)
+   if ((servotaktcounter == 300) && servoimpulshold)
    {
       servotaktcounter = 0;
-      servostatus |= (1<<SERVOCONTROLBIT); // flag fuer Impuls setzen
+      servostatus |= (1<<SERVOCONTROLBIT); // flag fuer neuen Impuls setzen
       SERVOPORT |= (1<<SERVOPIN0); 
       servoimpulscounter = 0;
+      servoimpulshold--;
+        
    }
    
    
