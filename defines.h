@@ -57,30 +57,9 @@
 #define KEY_PAUSE   0x0b
 
 
-
-
-
-
-
-// alte defines
-
-#define TWI_PORT      PORTC
-#define TWI_PIN      PINC
-#define TWI_DDR      DDRC
-
 #define SDAPIN      4 // PORT C
 #define SCLPIN      5
 
-
-
-#define STARTDELAYBIT   0
-#define HICOUNTBIT      1
-
-#define WDTBIT         7
-
-
-#define BUEROPORT   PORTD      // Ausgang fuer BUERO
-#define UHRPIN 0
 
 #define SERVOPORT   PORTC      // Ausgang fuer Servo
 #define SERVODDR  DDRC
@@ -92,13 +71,8 @@
 #define SERVOMIN 40
 #define SERVOMAX 145 
 #define SERVOMITTE (SERVOMIN + SERVOMAX)/2
-#define SERVOSTART 60
+#define SERVOSTART 55
 #define SERVOHOLD 50    // Anz Impulse pro remoteevent
-
-
-// Definitionen Slave Buero
-#define UHREIN 0
-#define UHRAUS 1
 
 
 #define LOOPLEDPORT      PORTD
@@ -108,20 +82,7 @@
 #define LOOPLED         7
 
 
-
-
-#define TASTATURPIN      3
-#define POTPIN         0
-#define BUZZERPIN      0
-
-#define INNEN         0   //   Byte fuer INNENtemperatur
-#define AUSSEN         1   //   Byte fuer Aussentemperatur
-#define STATUS         3   //   Byte fuer Status
-#define BRENNERPIN      2   //   PIN 2 von PORT B als Eingang fuer Brennerstatus
-
-
-
-#define TIMER0_STARTWERT   0x40
+//#define TIMER0_STARTWERT   0x40
 
 
 #endif /* defines_h */

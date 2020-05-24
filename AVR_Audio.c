@@ -62,7 +62,6 @@ volatile uint8_t servoposition=SERVOSTART;
 
 volatile uint8_t ServoimpulsdauerSpeicher=0;	//	Speicher  fuer Servoimpulsdauer
 volatile uint8_t Potwert=45;
-volatile uint8_t TWI_Pause=1;
 uint8_t servoimpulsNullpunkt=23;
 uint8_t servoimpulsSchrittweite=10;
 //uint8_t Servoposition[]={23,33,42,50,60};
@@ -103,7 +102,7 @@ volatile uint8_t aktuellerkanal = 0xFF;
 
 volatile uint8_t lastkanal = 0xFF;
 
-
+volatile uint8_t pauseposition = SERVOSTART;
 
 volatile uint8_t aktiverkanal = 0;
 volatile uint8_t neuerkanal = 0;
@@ -116,6 +115,7 @@ uint16_t inputlevel[4] = {0};
 // defines loopstatus
 #define SEKUNDE         0
 #define AMP_ON          1
+#define PAUSE           2
 
 uint16_t kanaldelay[4] = {0};
 uint16_t kanaldelayA = KANALDELAY;
@@ -202,9 +202,11 @@ void audio_remote(uint8_t command)
       {
          lcd_gotoxy(10,0);
          lcd_puts("+  ");
+         loopstatus &= ~(1<<PAUSE); // eventuelle Pause beenden
          if (servoposition < SERVOMAX)
          {
             servoposition++;
+            pauseposition = servoposition;
             servoimpulshold = SERVOHOLD; 
          }
          break;
@@ -214,9 +216,11 @@ void audio_remote(uint8_t command)
       {
          lcd_gotoxy(10,0);
          lcd_puts("-  ");
+         loopstatus &= ~(1<<PAUSE); // eventuelle Pause beenden
          if (servoposition > SERVOMIN)
          {
             servoposition--;
+            pauseposition = servoposition;
             servoimpulshold = SERVOHOLD; 
          }
 
@@ -225,9 +229,29 @@ void audio_remote(uint8_t command)
          
       case APPLE_PLAY:
       {
-         lcd_gotoxy(10,0);
-         lcd_puts("play");
-         PORTD &= ~((1 << 3) | (1 << 4)| (1 << 5)| (1 << 6)); 
+         lcd_gotoxy(14,1);
+         uint8_t relais = aktuellerkanal+3; // position auf PORTD
+        // if (kanalstatus & (1<<aktuellerkanal))// aktueller kanal vorhanden
+         {
+           // if (PORTD & (1<< relais)) // Kanal ist ON, pause ein
+            if (loopstatus & (1<<PAUSE))// pause beenden
+            {
+               loopstatus &= ~(1<<PAUSE);
+               servoposition = pauseposition;
+               servoimpulshold = SERVOHOLD; 
+               lcd_puts("play ");
+            }
+            else 
+            {
+               loopstatus |= (1<<PAUSE);
+               lcd_puts("pause");
+               pauseposition = servoposition;
+               servoposition = SERVOMIN; // Volume down
+               servoimpulshold = SERVOHOLD; 
+            }
+         }// if aktuellerkanal
+            
+          
          break;
       }
          
@@ -240,7 +264,34 @@ void audio_remote(uint8_t command)
          {
             
             lcd_putc('1');
-            outputdelay = OUTPUTDELAY;
+            // ersten aktiven Kanal suchen
+            for (int kanal=0;kanal < 4;kanal++)
+            {
+               if ((inputstatus) & (1<<kanal))
+               {
+                  neuerkanal = kanal;
+                  kanaldelay[kanal] = KANALDELAY;
+               }
+               else
+               {
+                  kanaldelay[kanal] = 3;
+               }
+               
+            }
+            // neuen Kanal einschalten
+            uint8_t relais = neuerkanal+3; // position auf PORTD
+            outputdelay = OUTPUTDELAY; // outputelay aktualisieren
+            PORTD |= (1<< (relais));
+            kanalstatus |= (1<<neuerkanal); 
+            //  kanaldelay[neuerkanal] = KANALDELAY;
+            lcd_gotoxy(6,1);
+            lcd_putc('N');
+            lcd_putint1(neuerkanal);
+            
+            // aktuellen Kanal neu setzen
+            aktuellerkanal = neuerkanal;
+
+            
          }
          else
          {
