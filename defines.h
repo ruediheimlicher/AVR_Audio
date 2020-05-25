@@ -72,7 +72,7 @@
 #define SERVOMAX 145 
 #define SERVOMITTE (SERVOMIN + SERVOMAX)/2
 #define SERVOSTART 55
-#define SERVOHOLD 50    // Anz Impulse pro remoteevent
+#define SERVOHOLD 25    // Anz Impulse pro remoteevent
 
 
 #define LOOPLEDPORT      PORTD

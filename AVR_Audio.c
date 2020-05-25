@@ -154,49 +154,86 @@ void audio_remote(uint8_t command)
         */
       case APPLE_REW: /*  */
       {
-         lcd_gotoxy(6,1);
+         lcd_gotoxy(4,2);
          lcd_puts("rew");
          lcd_puthex(inputstatus);
          lcd_putc(' ');
          lcd_puthex(aktuellerkanal);
-         if (aktuellerkanal && (inputstatus & (1<<(aktuellerkanal-1))))
+         lcd_putc(' ');
+         uint8_t neuerkanal = aktuellerkanal;
+         // aktiven Kanal vor aktuellerkanal suchen
+         if (aktuellerkanal) // noch nicht bei 0
          {
-            aktuellerkanal--;
-            remotechange |= (1<<aktuellerkanal);
-            lcd_puthex(remotechange);
+            neuerkanal--;
+            while ((neuerkanal) && (!(inputstatus & (1<<(neuerkanal))))) // next kanal ist nicht aktiv
+            {
+               neuerkanal--; // 
+            }
+            if ((neuerkanal == 0) && (!(inputstatus & (1<<(neuerkanal))))) // kanal 0 ist nicht aktiv
+            {
+               lcd_puts("nix0");
+               break; // nix
+            }
+            lcd_puts("tp");
+            lcd_puthex(neuerkanal);
+            // aktuellen kanal ausschalten
+            uint8_t relais = aktuellerkanal+3; // position auf PORTD
+            PORTD &= ~(1 << relais);
+            kanalstatus &= ~(1<<aktuellerkanal); // aktuellen Kanal entfernen
+            // neuen Kanal einschalten
+            relais = neuerkanal+3; // position auf PORTD
+            outputdelay = OUTPUTDELAY; // outputelay aktualisieren
+            PORTD |= (1<< (relais));
+            kanalstatus |= (1<<neuerkanal); 
+ 
+            aktuellerkanal = neuerkanal;
+          
          }
-         else 
-         {
-            remotechange = 0;
-            lcd_puts("--");
-         }
-
-
-        
-         break;
-      }
+       }break;
          
       case APPLE_FWD:
       {
-         lcd_gotoxy(6,1);
+         lcd_gotoxy(4,2);
          lcd_puts("fwd");
          lcd_puthex(inputstatus);
          lcd_putc(' ');
          lcd_puthex(aktuellerkanal);
-         if ((aktuellerkanal < 3) && (inputstatus & (1<<(aktuellerkanal+1))))
-         {
-            aktuellerkanal++;
-            remotechange |= (1<<aktuellerkanal);
-            lcd_puthex(remotechange);
-         }
-         else 
-         {
-            remotechange = 0;
-            lcd_puts("++");
-         }
-         
-         break;
-      }
+         lcd_putc(' ');
+         uint8_t neuerkanal = aktuellerkanal;
+         // aktiven Kanal vor aktuellerkanal suchen
+          if (aktuellerkanal < 3) 
+          {
+             neuerkanal++; // next kanal
+             while ((neuerkanal < 3) && (!(inputstatus & (1<<(neuerkanal))))) // dieser kanal ist nicht aktiv
+             {
+                neuerkanal++;
+             }
+             
+             if ((neuerkanal == 3)  && (!(inputstatus & (1<<(neuerkanal)))))// letzter kanal ist nicht aktiv
+             {
+                lcd_puts("nix ");
+                
+                break; // nix
+             }
+             
+             lcd_puts("tp");
+             lcd_puthex(neuerkanal);
+             
+          
+             // aktuellen kanal ausschalten
+             uint8_t relais = aktuellerkanal+3; // position auf PORTD
+             PORTD &= ~(1 << relais);
+             kanalstatus &= ~(1<<aktuellerkanal); // aktuellen Kanal entfernen
+             // neuen Kanal einschalten
+             relais = neuerkanal+3; // position auf PORTD
+             outputdelay = OUTPUTDELAY; // outputelay aktualisieren
+             PORTD |= (1<< (relais));
+             kanalstatus |= (1<<neuerkanal); 
+             
+             aktuellerkanal = neuerkanal;
+            
+          }
+        }break;
          
       case APPLE_PLUS:
       {
@@ -685,9 +722,6 @@ void main (void)
          lcd_gotoxy(19,0);
          lcd_putint1(sekundencounter);
 
-         lcd_gotoxy(0,1);
-         lcd_putc('a');
-         lcd_putint1(aktiverkanal);
    
          lcd_gotoxy(10,1);
          lcd_putc('L');
@@ -695,8 +729,8 @@ void main (void)
          
          lcd_gotoxy(0,2);  
          lcd_putint(servoposition);
-         lcd_putc(' ');
-         lcd_putint12(code);
+         //lcd_putc(' ');
+         //lcd_putint12(code);
 
 
 
@@ -865,7 +899,7 @@ void main (void)
                }
                
                /* ******************************************* */
-               // neuen Kanal ausschalten, aktuellen Kanal neu setzen
+               // neuen Kanal einschalten, aktuellen Kanal neu setzen
                /* ******************************************* */
                
                if (neuerkanal < 0xFF)
@@ -966,6 +1000,11 @@ void main (void)
          } // if change
          else
          {
+            
+            if (remotechange) // remote hat den atuellen kanal veraendert
+            {
+               
+            }
             //lcd_gotoxy(15,2);
             //lcd_puts("--");
          }
